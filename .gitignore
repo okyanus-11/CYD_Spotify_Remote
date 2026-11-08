@@ -1,6 +1,9 @@
+config.h
 *.local.h
 *.secret.h
 .pio/
 build/
 secrets*
-
+__pycache__/
+.env
+.spotify_cache
