@@ -457,11 +457,13 @@ void command(const char* path) {
   http.setConnectTimeout(3000);
   http.setTimeout(5000);
 
-  http.begin(
-    serverBase() + path
-  );
+  if (!http.begin(serverBase() + path)) {
+    Serial.println("Command failed: could not connect to server");
+    return;
+  }
 
-  int code = http.GET();
+  http.addHeader("X-CYD-Token", CYD_API_TOKEN);
+  int code = http.POST("");
 
   Serial.print(path);
   Serial.print(" -> ");

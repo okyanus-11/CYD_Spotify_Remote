@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """CYD Spotify Remote companion server.
 
-The ESP32 firmware sends simple GET requests and expects the legacy
-``song|artist|cover`` now-playing format.  This server keeps that contract and
-appends ``|1`` (playing) or ``|0`` (paused) so the display can update its
-PLAY/PAUSE button without redrawing the album art.
+The ESP32 firmware reads now-playing data with GET requests and sends playback
+controls with authenticated POST requests. The now-playing response keeps the
+legacy ``song|artist|cover`` format and appends ``|1`` (playing) or ``|0``
+(paused) so the display can update its PLAY/PAUSE button without redrawing art.
 
 Setup
     1. Create a Spotify app: https://developer.spotify.com/dashboard
@@ -19,11 +19,13 @@ commit .env or the token cache.
 """
 from __future__ import annotations
 
+import hmac
 import os
 import threading
 import time
+from functools import wraps
 
-from flask import Flask, Response, jsonify
+from flask import Flask, Response, jsonify, request
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,6 +36,7 @@ SCOPE = (
     "user-modify-playback-state"
 )
 CACHE_TTL_SECONDS = 2.0
+API_TOKEN_MIN_LENGTH = 32
 
 app = Flask(__name__)
 
@@ -110,6 +113,29 @@ def _sanitize(value, limit: int = 200) -> str:
 
 def _error(message: str, status: int = 503):
     return jsonify(ok=False, error=message), status
+
+
+def _require_api_token(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        expected = _env("CYD_API_TOKEN")
+        if not expected:
+            return _error("Control API token is not configured", 503)
+        if len(expected) < API_TOKEN_MIN_LENGTH:
+            return _error(
+                f"Control API token must be at least {API_TOKEN_MIN_LENGTH} characters",
+                503,
+            )
+
+        supplied = request.headers.get("X-CYD-Token", "")
+        if not hmac.compare_digest(
+            supplied.encode("utf-8"), expected.encode("utf-8")
+        ):
+            return _error("Unauthorized", 401)
+
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def _read_now_playing() -> tuple[dict, str | None]:
@@ -191,7 +217,8 @@ def health():
     )
 
 
-@app.get("/play")
+@app.post("/play")
+@_require_api_token
 def play():
     sp = get_spotify()
     if sp is None:
@@ -206,10 +233,12 @@ def play():
             sp.start_playback()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Play/pause failed: {exc}", 409)
+        app.logger.warning("Play/pause failed (%s)", type(exc).__name__)
+        return _error("Play/pause failed", 409)
 
 
-@app.get("/previous")
+@app.post("/previous")
+@_require_api_token
 def previous():
     sp = get_spotify()
     if sp is None:
@@ -218,10 +247,12 @@ def previous():
         sp.previous_track()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Previous failed: {exc}", 409)
+        app.logger.warning("Previous failed (%s)", type(exc).__name__)
+        return _error("Previous failed", 409)
 
 
-@app.get("/next")
+@app.post("/next")
+@_require_api_token
 def next_track():
     sp = get_spotify()
     if sp is None:
@@ -230,7 +261,8 @@ def next_track():
         sp.next_track()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Next failed: {exc}", 409)
+        app.logger.warning("Next failed (%s)", type(exc).__name__)
+        return _error("Next failed", 409)
 
 
 def _change_volume(delta: int):
@@ -239,19 +271,23 @@ def _change_volume(delta: int):
         return _error(_init_error)
     try:
         _playback, device = _require_device(sp)
-        current = int(device.get("volume_percent") or 50)
+        volume_percent = device.get("volume_percent")
+        current = 50 if volume_percent is None else int(volume_percent)
         sp.volume(max(0, min(100, current + delta)))
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Volume change failed: {exc}", 409)
+        app.logger.warning("Volume change failed (%s)", type(exc).__name__)
+        return _error("Volume change failed", 409)
 
 
-@app.get("/volume/up")
+@app.post("/volume/up")
+@_require_api_token
 def volume_up():
     return _change_volume(10)
 
 
-@app.get("/volume/down")
+@app.post("/volume/down")
+@_require_api_token
 def volume_down():
     return _change_volume(-10)
 

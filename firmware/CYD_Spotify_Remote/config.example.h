@@ -8,3 +8,6 @@
 // Do NOT include http:// and do not reuse an old address without checking it.
 #define SPOTIFY_SERVER_HOST  "192.168.1.100"
 #define SPOTIFY_SERVER_PORT  5000
+
+// Must match the unique, 32+ character CYD_API_TOKEN in server/.env.
+#define CYD_API_TOKEN        ""

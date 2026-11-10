@@ -10,7 +10,11 @@ Verified with PlatformIO: RAM 51,316 bytes, flash 980,265 bytes.
 ## Setup
 
 Copy `firmware/CYD_Spotify_Remote/config.example.h` to `config.h` and fill in
-local values. Copy `server/.env.example` to `server/.env`, install
+local values. Generate a unique random `CYD_API_TOKEN` of at least 32
+characters, then set the same value in `server/.env` and `config.h`. The server
+refuses all playback-control requests until its token is configured; controls
+use authenticated POST requests, while now-playing remains a GET request.
+Copy `server/.env.example` to `server/.env`, install
 `server/requirements.txt`, run `authorize.py` once, then `server.py`.
 
 ## Fixes
