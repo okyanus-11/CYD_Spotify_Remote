@@ -11,6 +11,10 @@
 #include "config.example.h"
 #endif
 
+#ifndef SPOTIFY_COVER_ROOT_CA
+#define SPOTIFY_COVER_ROOT_CA ""
+#endif
+
 TFT_eSPI tft = TFT_eSPI();
 
 #define TOUCH_CS 33
@@ -580,8 +584,21 @@ void downloadCover() {
     "Downloading cover..."
   );
 
+  if (!coverURL.startsWith("https://")) {
+    Serial.println("Refusing non-HTTPS album artwork URL");
+    return;
+  }
+  if (strlen(SPOTIFY_COVER_ROOT_CA) < 100) {
+    Serial.println("Set SPOTIFY_COVER_ROOT_CA in config.h; refusing unverified artwork");
+    return;
+  }
+  if (time(nullptr) < 1700000000) {
+    Serial.println("Clock not synchronized; refusing unverified artwork");
+    return;
+  }
+
   WiFiClientSecure client;
-  client.setInsecure();
+  client.setCACert(SPOTIFY_COVER_ROOT_CA);
 
   HTTPClient http;
 
@@ -1028,6 +1045,14 @@ void setup() {
   );
 
   bootWiFi();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    unsigned long syncStarted = millis();
+    while (time(nullptr) < 1700000000 && millis() - syncStarted < 12000) {
+      delay(250);
+    }
+  }
 
   // -----------------------------------------------
   // SPOTIFY
