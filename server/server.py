@@ -38,6 +38,7 @@ SCOPE = (
 CACHE_TTL_SECONDS = 2.0
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 4096  # Tiny JSON messages only.
 
 
 def _is_loopback(address: str | None) -> bool:
