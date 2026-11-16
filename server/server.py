@@ -19,11 +19,13 @@ commit .env or the token cache.
 """
 from __future__ import annotations
 
+import hmac
+import ipaddress
 import os
 import threading
 import time
 
-from flask import Flask, Response, jsonify
+from flask import Flask, Response, jsonify, request
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,6 +38,29 @@ SCOPE = (
 CACHE_TTL_SECONDS = 2.0
 
 app = Flask(__name__)
+
+
+def _is_loopback(address: str | None) -> bool:
+    if not address:
+        return False
+    try:
+        return ipaddress.ip_address(address).is_loopback
+    except ValueError:
+        return False
+
+
+@app.before_request
+def require_local_or_authenticated_access():
+    token = _env("CYD_API_TOKEN", "") or ""
+    supplied = request.headers.get("Authorization", "")
+    if token:
+        if not hmac.compare_digest(supplied, f"Bearer {token}"):
+            return jsonify(ok=False, error="valid bearer token required"), 401
+        return None
+    if _is_loopback(request.remote_addr):
+        return None
+    return jsonify(ok=False, error="server administrator must configure CYD_API_TOKEN"), 503
+
 
 _lock = threading.Lock()
 _cache = {"at": 0.0, "payload": None}
@@ -295,8 +320,22 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
+    token = _env("CYD_API_TOKEN", "") or ""
+    try:
+        bind_is_loopback = ipaddress.ip_address(args.host).is_loopback
+    except ValueError:
+        bind_is_loopback = args.host.lower() == "localhost"
+
+    if not bind_is_loopback and len(token) < 24:
+        parser.error(
+            "CYD_API_TOKEN (at least 24 characters) is required for LAN binding"
+        )
+    if args.debug and not bind_is_loopback:
+        parser.error("--debug is only allowed on loopback addresses")
+
     print(f"CYD Spotify server listening on http://{args.host}:{args.port}")
     print("Set SPOTIFY_* values in .env; run authorize.py once.")
+    print("Bearer-token authentication is enabled." if token else "Loopback-only mode.")
     app.run(host=args.host, port=args.port, debug=args.debug)
 
 
