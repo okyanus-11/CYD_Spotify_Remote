@@ -15,6 +15,14 @@
 #ifndef SPOTIFY_COVER_ROOT_CA
 #define SPOTIFY_COVER_ROOT_CA ""
 #endif
+#ifndef SPOTIFY_SERVER_TOKEN
+#define SPOTIFY_SERVER_TOKEN ""
+#endif
+
+static bool hasServerToken() {
+  return strlen(SPOTIFY_SERVER_TOKEN) >= 24 &&
+         String(SPOTIFY_SERVER_TOKEN) != "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN";
+}
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -456,6 +464,10 @@ void command(const char* path) {
     Serial.println("Command skipped: Wi-Fi offline");
     return;
   }
+  if (!hasServerToken()) {
+    Serial.println("Command skipped: configure SPOTIFY_SERVER_TOKEN");
+    return;
+  }
 
   HTTPClient http;
 
@@ -465,6 +477,7 @@ void command(const char* path) {
   http.begin(
     serverBase() + path
   );
+  http.addHeader("Authorization", String("Bearer ") + SPOTIFY_SERVER_TOKEN);
 
   int code = http.GET();
 
@@ -482,7 +495,7 @@ void command(const char* path) {
 
 void getSpotifyInfo() {
 
-  if (WiFi.status() != WL_CONNECTED) {
+  if (WiFi.status() != WL_CONNECTED || !hasServerToken()) {
     return;
   }
 
@@ -495,6 +508,7 @@ void getSpotifyInfo() {
     http.end();
     return;
   }
+  http.addHeader("Authorization", String("Bearer ") + SPOTIFY_SERVER_TOKEN);
 
   int code = http.GET();
 
