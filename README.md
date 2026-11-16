@@ -13,8 +13,11 @@ Copy `firmware/CYD_Spotify_Remote/config.example.h` to `config.h` and fill in
 local values. Set `SPOTIFY_COVER_ROOT_CA` to the verified PEM root CA used by
 the Spotify artwork CDN; album-art downloads fail closed until this is set and
 the device clock is synchronized. Copy `server/.env.example` to
-`server/.env`, install `server/requirements.txt`, run `authorize.py` once,
-then `server.py`.
+`server/.env`, replace its `CYD_API_TOKEN` placeholder with a long random
+secret, and put the same value in `SPOTIFY_SERVER_TOKEN` in `config.h`.
+Install `server/requirements.txt`, run `authorize.py` once, then
+`server.py`. The server requires this token for LAN requests and only allows
+tokenless access over loopback.
 
 ## Fixes
 
@@ -23,5 +26,6 @@ bus handling and safer server errors.
 
 ## Limits
 
-Not tested on hardware or the live Spotify API. Album-art TLS certificate
+Not tested on hardware or the live Spotify API. The LAN control API uses a
+bearer token over trusted-network HTTP (do not port-forward it). Album-art TLS
 verification requires a correctly configured trusted root CA. No OTA updates.
