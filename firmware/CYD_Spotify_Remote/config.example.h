@@ -9,6 +9,9 @@
 #define SPOTIFY_SERVER_HOST  "192.168.1.100"
 #define SPOTIFY_SERVER_PORT  5000
 
+// Must match CYD_API_TOKEN in server/.env. Replace with a long random secret.
+#define SPOTIFY_SERVER_TOKEN "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN"
+
 
 // Required for verified HTTPS album-art downloads. Paste the PEM root CA that
 // validates the Spotify artwork CDN certificate chain. Empty fails closed.
