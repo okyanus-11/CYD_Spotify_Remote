@@ -8,3 +8,8 @@
 // Do NOT include http:// and do not reuse an old address without checking it.
 #define SPOTIFY_SERVER_HOST  "192.168.1.100"
 #define SPOTIFY_SERVER_PORT  5000
+
+
+// Required for verified HTTPS album-art downloads. Paste the PEM root CA that
+// validates the Spotify artwork CDN certificate chain. Empty fails closed.
+#define SPOTIFY_COVER_ROOT_CA ""
