@@ -5,6 +5,7 @@
 #include <XPT2046_Touchscreen.h>
 #include <TJpg_Decoder.h>
 #include <time.h>
+#include <Preferences.h>
 
 #if __has_include("config.h")
 #include "config.h"
@@ -22,6 +23,36 @@
 static bool hasServerToken() {
   return strlen(SPOTIFY_SERVER_TOKEN) >= 24 &&
          String(SPOTIFY_SERVER_TOKEN) != "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN";
+}
+
+#define RGB565(r, g, b) (uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3))
+struct UiPalette {
+  uint16_t background, panel, border, text, muted;
+  uint16_t accent, success, warning, danger, alternate;
+};
+static const UiPalette UI_PALETTES[] = {
+  {RGB565(16,21,29),RGB565(23,31,42),RGB565(44,57,72),RGB565(237,243,248),RGB565(154,171,186),RGB565(120,170,255),RGB565(88,201,154),RGB565(232,189,120),RGB565(232,121,121),RGB565(181,156,255)},
+  {RGB565(17,17,27),RGB565(26,26,42),RGB565(56,56,79),RGB565(236,236,247),RGB565(162,162,191),RGB565(181,156,255),RGB565(120,214,176),RGB565(230,197,139),RGB565(232,121,121),RGB565(120,170,255)},
+  {RGB565(242,245,249),RGB565(255,255,255),RGB565(215,224,233),RGB565(32,43,58),RGB565(102,119,138),RGB565(50,111,209),RGB565(22,132,92),RGB565(166,107,23),RGB565(185,67,67),RGB565(118,84,197)}
+};
+static uint8_t activeTheme = 0;
+static Preferences themePreferences;
+#define UI_BG (UI_PALETTES[activeTheme].background)
+#define UI_PANEL (UI_PALETTES[activeTheme].panel)
+#define UI_BORDER (UI_PALETTES[activeTheme].border)
+#define UI_TEXT (UI_PALETTES[activeTheme].text)
+#define UI_MUTED (UI_PALETTES[activeTheme].muted)
+#define UI_ACCENT (UI_PALETTES[activeTheme].accent)
+#define UI_SUCCESS (UI_PALETTES[activeTheme].success)
+#define UI_WARNING (UI_PALETTES[activeTheme].warning)
+#define UI_DANGER (UI_PALETTES[activeTheme].danger)
+#define UI_ALT (UI_PALETTES[activeTheme].alternate)
+
+static void cycleTheme() {
+  activeTheme = (activeTheme + 1) % (sizeof(UI_PALETTES) / sizeof(UI_PALETTES[0]));
+  themePreferences.begin("cyd-spotify", false);
+  themePreferences.putUChar("theme", activeTheme);
+  themePreferences.end();
 }
 
 TFT_eSPI tft = TFT_eSPI();
@@ -66,9 +97,9 @@ void bootText(const char* text, bool success = true) {
   tft.setTextSize(1);
 
   if (success) {
-    tft.setTextColor(TFT_GREEN);
+    tft.setTextColor(UI_SUCCESS);
   } else {
-    tft.setTextColor(TFT_RED);
+    tft.setTextColor(UI_DANGER);
   }
 
   tft.drawString(text, 15, tft.getCursorY());
@@ -89,7 +120,7 @@ void bootProgress(int percent) {
     y,
     w,
     h,
-    TFT_DARKGREY
+    UI_BORDER
   );
 
   int fillWidth =
@@ -102,11 +133,11 @@ void bootProgress(int percent) {
       y + 2,
       fillWidth,
       h - 4,
-      TFT_GREEN
+      UI_SUCCESS
     );
   }
 
-  tft.setTextColor(TFT_WHITE);
+  tft.setTextColor(UI_TEXT);
   tft.setTextSize(1);
 
   String percentText =
@@ -123,10 +154,10 @@ void bootProgress(int percent) {
 
 void bootScreen() {
 
-  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(UI_BG);
 
   // Logo
-  tft.setTextColor(TFT_GREEN);
+  tft.setTextColor(UI_SUCCESS);
   tft.setTextSize(3);
 
   tft.drawCentreString(
@@ -136,7 +167,7 @@ void bootScreen() {
     2
   );
 
-  tft.setTextColor(TFT_WHITE);
+  tft.setTextColor(UI_TEXT);
   tft.setTextSize(1);
 
   tft.drawCentreString(
@@ -152,11 +183,11 @@ void bootScreen() {
     70,
     305,
     70,
-    TFT_DARKGREY
+    UI_BORDER
   );
 
   // Initial system messages
-  tft.setTextColor(TFT_LIGHTGREY);
+  tft.setTextColor(UI_MUTED);
   tft.drawString(
     "SYSTEM INITIALIZATION",
     15,
@@ -165,7 +196,7 @@ void bootScreen() {
 
   delay(300);
 
-  tft.setTextColor(TFT_GREEN);
+  tft.setTextColor(UI_SUCCESS);
   tft.drawString(
     "[ OK ] Display driver",
     15,
@@ -224,9 +255,9 @@ void bootScreen() {
 
 void bootWiFi() {
 
-  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(UI_BG);
 
-  tft.setTextColor(TFT_GREEN);
+  tft.setTextColor(UI_SUCCESS);
   tft.setTextSize(2);
 
   tft.drawString(
@@ -236,7 +267,7 @@ void bootWiFi() {
   );
 
   tft.setTextSize(1);
-  tft.setTextColor(TFT_LIGHTGREY);
+  tft.setTextColor(UI_MUTED);
 
   tft.drawString(
     "Connecting to Wi-Fi...",
@@ -244,7 +275,7 @@ void bootWiFi() {
     50
   );
 
-  tft.setTextColor(TFT_WHITE);
+  tft.setTextColor(UI_TEXT);
 
   tft.drawString(
     ssid,
@@ -277,10 +308,10 @@ void bootWiFi() {
       100,
       290,
       25,
-      TFT_BLACK
+      UI_BG
     );
 
-    tft.setTextColor(TFT_GREEN);
+    tft.setTextColor(UI_SUCCESS);
 
     String loading = "Connecting";
 
@@ -309,12 +340,12 @@ void bootWiFi() {
     100,
     290,
     60,
-    TFT_BLACK
+    UI_BG
   );
 
   if (WiFi.status() == WL_CONNECTED) {
 
-    tft.setTextColor(TFT_GREEN);
+    tft.setTextColor(UI_SUCCESS);
 
     tft.drawString(
       "[ OK ] Wi-Fi connected",
@@ -328,7 +359,7 @@ void bootWiFi() {
       120
     );
 
-    tft.setTextColor(TFT_LIGHTGREY);
+    tft.setTextColor(UI_MUTED);
 
     tft.drawString(
       WiFi.localIP().toString(),
@@ -343,7 +374,7 @@ void bootWiFi() {
   } else {
 
     // Don't get permanently stuck if Wi-Fi fails.
-    tft.setTextColor(TFT_RED);
+    tft.setTextColor(UI_DANGER);
 
     tft.drawString(
       "[FAIL] Wi-Fi connection",
@@ -351,7 +382,7 @@ void bootWiFi() {
       105
     );
 
-    tft.setTextColor(TFT_LIGHTGREY);
+    tft.setTextColor(UI_MUTED);
 
     tft.drawString(
       "Continuing offline...",
@@ -372,9 +403,9 @@ void bootWiFi() {
 
 void bootReady() {
 
-  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(UI_BG);
 
-  tft.setTextColor(TFT_GREEN);
+  tft.setTextColor(UI_SUCCESS);
   tft.setTextSize(3);
 
   tft.drawCentreString(
@@ -384,7 +415,7 @@ void bootReady() {
     2
   );
 
-  tft.setTextColor(TFT_WHITE);
+  tft.setTextColor(UI_TEXT);
   tft.setTextSize(1);
 
   tft.drawCentreString(
@@ -394,7 +425,7 @@ void bootReady() {
     1
   );
 
-  tft.setTextColor(TFT_DARKGREY);
+  tft.setTextColor(UI_BORDER);
 
   tft.drawCentreString(
     "SYSTEM ONLINE",
@@ -410,10 +441,10 @@ void bootReady() {
     160,
     40,
     8,
-    TFT_GREEN
+    UI_SUCCESS
   );
 
-  tft.setTextColor(TFT_GREEN);
+  tft.setTextColor(UI_SUCCESS);
 
   tft.drawCentreString(
     "CONTROLS ENABLED",
@@ -730,7 +761,7 @@ void downloadCover() {
     45,
     80,
     80,
-    TFT_BLACK
+    UI_BG
   );
 
   // 640x640 -> 80x80
@@ -751,7 +782,7 @@ void downloadCover() {
     45,
     80,
     80,
-    TFT_DARKGREY
+    UI_BORDER
   );
 
   Serial.println(
@@ -778,7 +809,7 @@ void button(
     w,
     h,
     8,
-    TFT_DARKGREY
+    UI_BORDER
   );
 
   tft.drawRoundRect(
@@ -787,11 +818,11 @@ void button(
     w,
     h,
     8,
-    TFT_WHITE
+    UI_TEXT
   );
 
   tft.setTextColor(
-    TFT_WHITE
+    UI_TEXT
   );
 
   tft.setTextSize(1);
@@ -828,14 +859,11 @@ void drawPlaybackButtons() {
 void drawScreen() {
 
   tft.fillScreen(
-    TFT_BLACK
+    UI_BG
   );
 
   // Header
-  tft.setTextColor(
-    TFT_GREEN
-  );
-
+  tft.setTextColor(UI_SUCCESS);
   tft.setTextSize(3);
 
   tft.drawString(
@@ -843,6 +871,9 @@ void drawScreen() {
     105,
     5
   );
+  tft.setTextSize(1);
+  tft.setTextColor(UI_TEXT, UI_BG);
+  tft.drawString("THEME", 270, 10);
 
   // Album art border
   tft.drawRect(
@@ -850,12 +881,12 @@ void drawScreen() {
     45,
     80,
     80,
-    TFT_DARKGREY
+    UI_BORDER
   );
 
   // Artist
   tft.setTextColor(
-    TFT_LIGHTGREY
+    UI_MUTED
   );
 
   tft.setTextSize(1);
@@ -890,7 +921,7 @@ void drawScreen() {
   // screen that looks alive but cannot reach the server.
   tft.setTextSize(1);
   tft.setTextColor(
-    WiFi.status() == WL_CONNECTED ? TFT_GREEN : TFT_RED
+    WiFi.status() == WL_CONNECTED ? UI_SUCCESS : UI_DANGER
   );
   tft.drawString(
     WiFi.status() == WL_CONNECTED ? "WIFI ONLINE" : "WIFI OFFLINE",
@@ -915,11 +946,11 @@ void drawScrollingText() {
       45,
       220,
       35,
-      TFT_BLACK
+      UI_BG
     );
 
     tft.setTextColor(
-      TFT_WHITE
+      UI_TEXT
     );
 
     tft.setTextSize(2);
@@ -955,11 +986,11 @@ void drawScrollingText() {
     0,
     220,
     40,
-    TFT_BLACK
+    UI_BG
   );
 
   tft.setTextColor(
-    TFT_WHITE
+    UI_TEXT
   );
 
   tft.setTextSize(2);
@@ -1004,9 +1035,13 @@ void setup() {
   tft.init();
 
   tft.setRotation(1);
+  themePreferences.begin("cyd-spotify", true);
+  activeTheme = themePreferences.getUChar("theme", 0);
+  themePreferences.end();
+  if (activeTheme >= sizeof(UI_PALETTES) / sizeof(UI_PALETTES[0])) activeTheme = 0;
 
   tft.fillScreen(
-    TFT_BLACK
+    UI_BG
   );
 
   // -----------------------------------------------
@@ -1153,11 +1188,19 @@ void loop() {
       239
     );
 
+    // Tap THEME in the top-right corner to cycle saved palettes.
+    if (y <= 32 && x >= 265) {
+      cycleTheme();
+      drawScreen();
+      if (coverURL.length() > 0) downloadCover();
+      lastCoverURL = coverURL;
+    }
+
     // ---------------------------------------------
     // PLAYBACK BUTTONS
     // ---------------------------------------------
 
-    if (
+    else if (
       y >= 140 &&
       y <= 175
     ) {
