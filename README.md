@@ -10,7 +10,7 @@ Light palettes. The selected palette is saved in ESP32 Preferences.
 
 ## Build
 
-Verified with PlatformIO: RAM 51,316 bytes, flash 980,265 bytes.
+Verified with PlatformIO: RAM 51,384 bytes (15.7%), flash 980,861 bytes (31.2% of the 3 MB app partition).
 
 ## Setup
 
