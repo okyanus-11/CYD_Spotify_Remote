@@ -811,7 +811,7 @@ void button(
     w,
     h,
     8,
-    UI_BORDER
+    UI_PANEL
   );
 
   tft.drawRoundRect(
