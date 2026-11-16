@@ -6,7 +6,7 @@
 
 // IPv4 address or hostname of the Windows PC running server/server.py.
 // Do NOT include http:// and do not reuse an old address without checking it.
-#define SPOTIFY_SERVER_HOST  "192.168.1.100"
+#define SPOTIFY_SERVER_HOST  "YOUR_PC_LAN_IP"
 #define SPOTIFY_SERVER_PORT  5000
 
 // Must match CYD_API_TOKEN in server/.env. Replace with a long random secret.
