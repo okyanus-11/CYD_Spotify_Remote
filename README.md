@@ -3,6 +3,11 @@
 Touchscreen Spotify controller for the ESP32-2432S028 with a Flask/Spotipy
 server for Windows.
 
+## Appearance
+
+Tap **THEME** in the top-right of the header to cycle Graphite, Midnight and
+Light palettes. The selected palette is saved in ESP32 Preferences.
+
 ## Build
 
 Verified with PlatformIO: RAM 51,316 bytes, flash 980,265 bytes.
@@ -18,11 +23,6 @@ secret, and put the same value in `SPOTIFY_SERVER_TOKEN` in `config.h`.
 Install `server/requirements.txt`, run `authorize.py` once, then
 `server.py`. The server requires this token for LAN requests and only allows
 tokenless access over loopback.
-
-## Fixes
-
-Pause-safe album art, offline retry, configurable network settings, shared SPI
-bus handling and safer server errors.
 
 ## Limits
 
