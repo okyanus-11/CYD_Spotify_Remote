@@ -4,6 +4,7 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include <TJpg_Decoder.h>
+#include <time.h>
 
 #if __has_include("config.h")
 #include "config.h"
