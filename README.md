@@ -32,4 +32,4 @@ verification requires a correctly configured trusted root CA. No OTA updates.
 
 ## Installation
 
-For prerequisites, environment setup, configuration, and run/build commands, see the [installation guide](INSTALLATION.md).
+Requires a CYD board, PlatformIO, a Spotify account/developer app and a PC to run the companion server. Configure the firmware's local `config.h` and the server's `.env` with matching strong tokens, Spotify credentials, the PC's LAN address and the trusted artwork root CA. Install `server/requirements.txt`, authorize Spotify, start the server, then build/upload firmware from `firmware/`. See the [full installation and flashing guide](INSTALLATION.md).
