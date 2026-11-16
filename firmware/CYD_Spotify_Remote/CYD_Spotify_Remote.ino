@@ -1196,6 +1196,8 @@ void loop() {
       drawScreen();
       if (coverURL.length() > 0) downloadCover();
       lastCoverURL = coverURL;
+      while (touch.touched()) delay(10);
+      delay(100);
     }
 
     // ---------------------------------------------
