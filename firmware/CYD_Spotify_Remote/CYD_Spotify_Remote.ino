@@ -1337,4 +1337,8 @@ void loop() {
   // -----------------------------------------------
 
   drawScrollingText();
+
+  // Yield between touch and polling work so Wi-Fi/background tasks run
+  // smoothly without keeping the ESP32 loop at 100% while idle.
+  delay(5);
 }
