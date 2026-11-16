@@ -29,3 +29,7 @@ tokenless access over loopback.
 Not tested on hardware or the live Spotify API. The LAN control API uses a
 bearer token over trusted-network HTTP (do not port-forward it). Album-art TLS
 verification requires a correctly configured trusted root CA. No OTA updates.
+
+## Installation
+
+For prerequisites, environment setup, configuration, and run/build commands, see the [installation guide](INSTALLATION.md).
