@@ -52,6 +52,8 @@ def _is_loopback(address: str | None) -> bool:
 @app.before_request
 def require_local_or_authenticated_access():
     token = _env("CYD_API_TOKEN", "") or ""
+    if token == "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN":
+        token = ""
     supplied = request.headers.get("Authorization", "")
     if token:
         if not hmac.compare_digest(supplied, f"Bearer {token}"):
@@ -326,9 +328,12 @@ def main() -> None:
     except ValueError:
         bind_is_loopback = args.host.lower() == "localhost"
 
-    if not bind_is_loopback and len(token) < 24:
+    if not bind_is_loopback and (
+        len(token) < 24 or token == "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN"
+    ):
         parser.error(
-            "CYD_API_TOKEN (at least 24 characters) is required for LAN binding"
+            "Replace CYD_API_TOKEN with a private random value of at least "
+            "24 characters before LAN binding"
         )
     if args.debug and not bind_is_loopback:
         parser.error("--debug is only allowed on loopback addresses")
