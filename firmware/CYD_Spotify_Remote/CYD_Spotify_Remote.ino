@@ -512,7 +512,8 @@ void command(const char* path) {
   );
   http.addHeader("Authorization", String("Bearer ") + SPOTIFY_SERVER_TOKEN);
 
-  int code = http.GET();
+  // Playback mutations are POST-only on the server.
+  int code = http.POST("");
 
   Serial.print(path);
   Serial.print(" -> ");
