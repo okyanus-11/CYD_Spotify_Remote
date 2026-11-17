@@ -56,8 +56,11 @@ def require_local_or_authenticated_access():
     if token == "CHANGE_ME_WITH_A_LONG_RANDOM_TOKEN":
         token = ""
     supplied = request.headers.get("Authorization", "")
+    device_token = request.headers.get("X-CYD-Token", "")
     if token:
-        if not hmac.compare_digest(supplied, f"Bearer {token}"):
+        bearer_valid = hmac.compare_digest(supplied, f"Bearer {token}")
+        device_valid = hmac.compare_digest(device_token, token)
+        if not (bearer_valid or device_valid):
             return jsonify(ok=False, error="valid bearer token required"), 401
         return None
     if _is_loopback(request.remote_addr):
@@ -219,7 +222,7 @@ def health():
     )
 
 
-@app.get("/play")
+@app.post("/play")
 def play():
     sp = get_spotify()
     if sp is None:
@@ -234,10 +237,11 @@ def play():
             sp.start_playback()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Play/pause failed: {exc}", 409)
+        app.logger.warning("Play/pause failed (%s)", type(exc).__name__)
+        return _error("Play/pause failed", 409)
 
 
-@app.get("/previous")
+@app.post("/previous")
 def previous():
     sp = get_spotify()
     if sp is None:
@@ -246,10 +250,11 @@ def previous():
         sp.previous_track()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Previous failed: {exc}", 409)
+        app.logger.warning("Previous failed (%s)", type(exc).__name__)
+        return _error("Previous failed", 409)
 
 
-@app.get("/next")
+@app.post("/next")
 def next_track():
     sp = get_spotify()
     if sp is None:
@@ -258,7 +263,8 @@ def next_track():
         sp.next_track()
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Next failed: {exc}", 409)
+        app.logger.warning("Next failed (%s)", type(exc).__name__)
+        return _error("Next failed", 409)
 
 
 def _change_volume(delta: int):
@@ -267,19 +273,21 @@ def _change_volume(delta: int):
         return _error(_init_error)
     try:
         _playback, device = _require_device(sp)
-        current = int(device.get("volume_percent") or 50)
+        volume_percent = device.get("volume_percent")
+        current = 50 if volume_percent is None else int(volume_percent)
         sp.volume(max(0, min(100, current + delta)))
         return "OK"
     except Exception as exc:  # noqa: BLE001
-        return _error(f"Volume change failed: {exc}", 409)
+        app.logger.warning("Volume change failed (%s)", type(exc).__name__)
+        return _error("Volume change failed", 409)
 
 
-@app.get("/volume/up")
+@app.post("/volume/up")
 def volume_up():
     return _change_volume(10)
 
 
-@app.get("/volume/down")
+@app.post("/volume/down")
 def volume_down():
     return _change_volume(-10)
 
